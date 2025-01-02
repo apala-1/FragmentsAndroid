@@ -47,8 +47,18 @@ class RegisterActivity : AppCompatActivity() {
                         userId.toString(),
                         email,fName,lName,address,contact)
 
-                    Toast.makeText(this@RegisterActivity,
-                        "REGISTRATION SUCCESS",Toast.LENGTH_SHORT).show()
+                    reference.child(userId.toString()).setValue(userModel)
+                        .addOnCompleteListener {
+                            if(it.isSuccessful){
+                                Toast.makeText(this@RegisterActivity,
+                                    "REGISTRATION SUCCESS",Toast.LENGTH_SHORT).show()
+                            }else{
+                                Toast.makeText(this@RegisterActivity,
+                                    it.exception?.message,Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+
                 }else{
                     Toast.makeText(this@RegisterActivity,
                         it.exception?.message,Toast.LENGTH_SHORT).show()
