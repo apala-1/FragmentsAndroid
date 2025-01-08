@@ -9,17 +9,20 @@ import androidx.core.view.WindowInsetsCompat
 import com.example.a35b_crud.R
 import com.example.a35b_crud.databinding.ActivityRegisterBinding
 import com.example.a35b_crud.model.UserModel
+import com.example.a35b_crud.repository.UserRepository
+import com.example.a35b_crud.repository.UserRepositoryImpl
+import com.example.a35b_crud.utils.LoadingUtils
+import com.example.a35b_crud.viewmodel.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 
 class RegisterActivity : AppCompatActivity() {
     lateinit var binding: ActivityRegisterBinding
-    lateinit var auth: FirebaseAuth
 
-    val database : FirebaseDatabase = FirebaseDatabase.getInstance()
-    val reference : DatabaseReference = database.reference.
-                                            child("users")
+    lateinit var userViewModel: UserViewModel
+
+    lateinit var loadingUtils: LoadingUtils
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,9 +31,15 @@ class RegisterActivity : AppCompatActivity() {
         binding = ActivityRegisterBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        auth = FirebaseAuth.getInstance()
+        loadingUtils = LoadingUtils(this)
+
+        val userRepository = UserRepositoryImpl()
+
+        userViewModel = UserViewModel(userRepository)
+
 
         binding.signUp.setOnClickListener {
+            loadingUtils.show()
             var email: String = binding.registerEmail.text.toString()
             var password: String = binding.registerPassword.text.toString()
             var fName: String = binding.registerFname.text.toString()
@@ -38,39 +47,45 @@ class RegisterActivity : AppCompatActivity() {
             var address: String = binding.registerAddress.text.toString()
             var contact: String = binding.registerContact.text.toString()
 
-            auth.createUserWithEmailAndPassword(email, password).addOnCompleteListener {
-                if(it.isSuccessful){
-
-                    val userId = auth.currentUser?.uid
-
+            userViewModel.signup(email,password){
+                    success,message,userId ->
+                if(success){
                     val userModel = UserModel(
-                        userId.toString(),
-                        email,fName,lName,address,contact)
-
-                    reference.child(userId.toString()).setValue(userModel)
-                        .addOnCompleteListener {
-                            if(it.isSuccessful){
-                                Toast.makeText(this@RegisterActivity,
-                                    "REGISTRATION SUCCESS",Toast.LENGTH_SHORT).show()
-                            }else{
-                                Toast.makeText(this@RegisterActivity,
-                                    it.exception?.message,Toast.LENGTH_SHORT).show()
-                            }
-                        }
-
-
+                        userId,
+                        email, fName, lName, address, contact
+                    )
+                    addUser(userModel)
                 }else{
+                    loadingUtils.dismiss()
                     Toast.makeText(this@RegisterActivity,
-                        it.exception?.message,Toast.LENGTH_SHORT).show()
+                        message,Toast.LENGTH_SHORT).show()
                 }
-            }
 
+
+            }
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
+        }
+    }
+
+
+
+    fun addUser(userModel: UserModel){
+        userViewModel.addUserToDatabase(userModel.userId,userModel){
+                success,message ->
+            if(success){
+                loadingUtils.dismiss()
+                Toast.makeText(this@RegisterActivity
+                    ,message,Toast.LENGTH_SHORT).show()
+            }else{
+                loadingUtils.dismiss()
+                Toast.makeText(this@RegisterActivity
+                    ,message,Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }
